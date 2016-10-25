@@ -1,0 +1,13 @@
+REMOTE:hostname -f
+REMOTE:timedatectl
+#REMOTE:cat /proc/version
+#REMOTE:sudo ps faux
+#REMOTE:cat /etc/passwd
+#REMOTE:df -h
+#REMOTE:mount
+#REMOTE:sudo ss -lptn (lsof as a fallback)
+#REMOTE:sudo ip route
+#REMOTE:cat /etc/resolv.conf
+#REMOTE:systemctl list-unit-files --all
+#REMOTE:sudo docker --version
+#REMOTE:sudo cinf
