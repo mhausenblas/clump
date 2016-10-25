@@ -17,15 +17,14 @@ with:
 
 For example:
 
-    $ cat mynodes
-    1.2.3.4
-    5.6.7.8
+    $ cat test/clusternodes
+    35.160.157.251
     
-    $ cat mycommands
-    LOCAL:dcos node diagnostics create all 
-    LOCAL:dcos node diagnostics download bundle-2016-10-25T13:12:28-865859744.zip
+    $ cat test/snapshot.cmds
     REMOTE:hostname -f
-    REMOTE:cat /proc/version
+    REMOTE:timedatectl
+    #REMOTE:cat /proc/version
+    #REMOTE:sudo ps faux
     
     $ clump -u core -pk /Users/mhausenblas/.ssh/test -nl test/clusternodes -cmds test/snapshot.cmds
     Trying to establish node list from test/clusternodes
@@ -34,6 +33,12 @@ For example:
     Got 2 commands to execute
     Attempting to ssh into core@35.160.157.251
     Attempting to ssh into core@35.160.157.251
+    
+    $ tree
+    .
+    ├── 35_160_157_251
+    │   ├── hostname_-f
+    │   └── timedatectl
 
 Kudos go out to [Svett Ralchev](http://blog.ralch.com/tutorial/golang-ssh-connection/) for the seed code base around the SSH client.
 
