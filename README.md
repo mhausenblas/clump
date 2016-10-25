@@ -22,8 +22,8 @@ For example:
     5.6.7.8
     
     $ cat mycommands
-    LOCAL:dcos node diagnostics create all dcosreport
-    LOCAL:dcos node diagnostics download dcosreport
+    LOCAL:dcos node diagnostics create all 
+    LOCAL:dcos node diagnostics download bundle-2016-10-25T13:12:28-865859744.zip
     REMOTE:hostname -f
     REMOTE:cat /proc/version
     
