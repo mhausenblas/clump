@@ -36,9 +36,9 @@ For example:
     
     $ tree
     .
-    ├── 35_160_157_251
-    │   ├── hostname_-f
-    │   └── timedatectl
+    └── 35_160_157_251
+        ├── hostname_-f
+        └── timedatectl
 
 Kudos go out to [Svett Ralchev](http://blog.ralch.com/tutorial/golang-ssh-connection/) for the seed code base around the SSH client.
 

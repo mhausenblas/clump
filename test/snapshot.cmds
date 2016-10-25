@@ -1,5 +1,7 @@
-REMOTE:hostname -f
-REMOTE:timedatectl
+#LOCAL:dcos node diagnostics create all 
+#LOCAL:dcos node diagnostics download xxxx.zip
+#REMOTE:/bin/hostname -f
+#REMOTE:timedatectl
 #REMOTE:cat /proc/version
 #REMOTE:sudo ps faux
 #REMOTE:cat /etc/passwd

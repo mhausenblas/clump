@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -29,6 +30,11 @@ type SSHClient struct {
 	Config *ssh.ClientConfig
 	Host   string
 	Port   int
+}
+
+type Commands struct {
+	local  []string
+	remote []string
 }
 
 func init() {
@@ -67,16 +73,20 @@ func nodes() ([]string, error) {
 	return n, nil
 }
 
-func commands() ([]string, error) {
+func commands() (*Commands, error) {
 	fmt.Println(fmt.Sprintf("Trying to establish list of commands from %s", fcmds))
-	c := make([]string, 0)
+	c := &Commands{}
 	if cmdl, err := ioutil.ReadFile(fcmds); err == nil {
 		lines := strings.Split(string(cmdl), "\n")
 		for _, l := range lines {
-			// scope := strings.Split(l, ":")[0]
+			scope := strings.Split(l, ":")[0]
 			cmd := strings.Split(l, ":")[1]
 			if !strings.HasPrefix(l, "#") {
-				c = append(c, cmd)
+				if scope == "LOCAL" {
+					c.local = append(c.local, cmd)
+				} else {
+					c.remote = append(c.remote, cmd)
+				}
 			}
 		}
 	} else {
@@ -97,17 +107,17 @@ func mexec(node string, commands []string) {
 		os.Mkdir(resultdir, 0700)
 	}
 	for _, cmd := range commands {
-		exec(node, cmd, resultdir)
+		rexec(node, cmd, resultdir)
 	}
 }
 
-func exec(node string, command string, resultdir string) {
+func rexec(node string, command string, resultdir string) {
 	sshConfig := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
 			publickey(fprivatekey)},
 	}
-	fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s", user, node))
+	fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
 	client := &SSHClient{
 		Config: sshConfig,
 		Host:   node,
@@ -186,13 +196,23 @@ func main() {
 			fmt.Println(fmt.Sprintf("Problem reading node list ", nerr))
 			os.Exit(1)
 		} else {
-			fmt.Println(fmt.Sprintf("Got %d target nodes", len(n)))
+			fmt.Println(fmt.Sprintf("Got %d target node(s)", len(n)))
 			if c, cerr := commands(); cerr != nil {
 				fmt.Println(fmt.Sprintf("Problem reading commands ", cerr))
 				os.Exit(2)
 			} else {
-				fmt.Println(fmt.Sprintf("Got %d commands to execute", len(c)))
-				nexec(n, c)
+				fmt.Println(fmt.Sprintf("Executing %d command(s) locally ...", len(c.local)))
+				for _, c := range c.local {
+					cmd := &exec.Cmd{Path: strings.Fields(c)[0], Args: strings.Fields(c)[1:]}
+					out, err := cmd.Output()
+					if err != nil {
+						fmt.Println(fmt.Sprintf("Problem executing \"%s\" %s", c, err))
+						os.Exit(3)
+					}
+					fmt.Printf(string(out))
+				}
+				fmt.Println(fmt.Sprintf("Executing %d command(s) remotely ...", len(c.remote)))
+				nexec(n, c.remote)
 			}
 		}
 	} else {
