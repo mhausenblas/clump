@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 	"io"
 	"io/ioutil"
 	"net"
@@ -20,10 +20,16 @@ const (
 )
 
 var (
-	user        string
-	fprivatekey string
-	fnodes      string
-	fcmds       string
+	user                  string
+	fprivatekey           string
+	fnodes                string
+	fcmds                 string
+	IPv4_24bit_block_low  net.IP
+	IPv4_24bit_block_high net.IP
+	IPv4_20bit_block_low  net.IP
+	IPv4_20bit_block_high net.IP
+	IPv4_16bit_block_low  net.IP
+	IPv4_16bit_block_high net.IP
 )
 
 type SSHClient struct {
@@ -38,9 +44,18 @@ type Commands struct {
 }
 
 func init() {
+	// What follows is the IPv4 private address space
+	// as of https://tools.ietf.org/html/rfc1918
+	IPv4_24bit_block_low = net.ParseIP("10.0.0.0")
+	IPv4_24bit_block_high = net.ParseIP("10.255.255.255")
+	IPv4_20bit_block_low = net.ParseIP("172.16.0.0")
+	IPv4_20bit_block_high = net.ParseIP("172.31.255.255")
+	IPv4_16bit_block_low = net.ParseIP("192.168.0.0")
+	IPv4_16bit_block_high = net.ParseIP("192.168.255.255")
+
 	flag.StringVar(&user, "u", "", "user name to use for SSH connection")
 	flag.StringVar(&fprivatekey, "pk", "", "path to private key to use for SSH connection")
-	flag.StringVar(&fnodes, "nl", "", "path to file listing the target nodes, one IP address or FQDN per line")
+	flag.StringVar(&fnodes, "nl", "", "path to file listing the target nodes, one IP address per line")
 	flag.StringVar(&fcmds, "cmds", "", "path to file listing the commands to be executed, one entry per line")
 	flag.Usage = func() {
 		fmt.Println("\nUsage: clump -u $USERNAME -pk $PRIVATESSHKEY -nl $NODES -cmds $COMMANDS")
@@ -56,6 +71,26 @@ func about() {
 
 ///////////////////////////////////////////////////////////////////////////////
 // utils
+
+func privateIP(ip string) (bool, error) {
+	trial := net.ParseIP(ip)
+	isprivate := false
+	if trial.To4() == nil { // can't parse as IP4
+		return isprivate, errors.New("Can't parse IP address")
+	}
+	if bytes.Compare(trial, IPv4_24bit_block_low) >= 0 && bytes.Compare(trial, IPv4_24bit_block_high) <= 0 {
+		isprivate = true
+	} else {
+		if bytes.Compare(trial, IPv4_20bit_block_low) >= 0 && bytes.Compare(trial, IPv4_20bit_block_high) <= 0 {
+			isprivate = true
+		} else {
+			if bytes.Compare(trial, IPv4_16bit_block_low) >= 0 && bytes.Compare(trial, IPv4_16bit_block_high) <= 0 {
+				isprivate = true
+			}
+		}
+	}
+	return isprivate, nil
+}
 
 func nodes() ([]string, error) {
 	fmt.Println(fmt.Sprintf("Trying to establish node list from %s", fnodes))
@@ -117,15 +152,23 @@ func rexec(node string, command string, resultdir string) {
 		Auth: []ssh.AuthMethod{
 			publickey(fprivatekey)},
 	}
-	fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
-	client := &SSHClient{
-		Config: sshConfig,
-		Host:   node,
-		Port:   22,
-	}
-	if err := client.run(command, resultdir); err != nil {
-		fmt.Println(fmt.Sprintf("Executing %s on %s failed ", command, client.Host, err))
-		os.Exit(3)
+
+	if isprivate, err := privateIP(node); err == nil {
+		if isprivate { // node has an IP that is in the private address space
+			fmt.Println(fmt.Sprintf("Skipping %s for now", node))
+		} else {
+			fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
+			client := &SSHClient{
+				Config: sshConfig,
+				Host:   node,
+				Port:   22,
+			}
+			if err := client.run(command, resultdir); err != nil {
+				fmt.Println(fmt.Sprintf("Executing %s on %s failed ", command, client.Host, err))
+			}
+		}
+	} else {
+		fmt.Println(fmt.Sprintf("Skipping %s since it's not a valid IPv4 address", node))
 	}
 }
 
@@ -178,13 +221,6 @@ func publickey(file string) ssh.AuthMethod {
 		return nil
 	}
 	return ssh.PublicKeys(key)
-}
-
-func SSHAgent() ssh.AuthMethod {
-	if sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK")); err == nil {
-		return ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers)
-	}
-	return nil
 }
 
 func main() {

@@ -12,7 +12,7 @@ with:
 
 - `$USERNAME` … username to use for SSH connection  
 - `$PRIVATESSHKEY` … filename (with relative or absolute filepath) of the private SSH key to use
-- `$NODES` … filename (with relative or absolute filepath) of a text file listing the target nodes, one IP address or FQDN per line
+- `$NODES` … filename (with relative or absolute filepath) of a text file listing the target nodes, one IP address per line
 - `$COMMANDS` … filename (with relative or absolute filepath) of a text file listing the commands to be executed with one entry per line; if an entry is prefixed with `LOCAL:` it will be executed locally, if `REMOTE:` then on each of the target nodes
 
 For example:
