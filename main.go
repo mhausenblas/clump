@@ -174,10 +174,10 @@ func mexec(node string, commands []string) {
 				buf := bufio.NewReadWriter(bufio.NewReader(&bin), bufio.NewWriter(&bout))
 
 				if err := remote.run(cmd, "", buf); err != nil {
-					fmt.Println(fmt.Sprintf("Executing %s on %s failed ", cmd, client.Host, err))
+					fmt.Println(fmt.Sprintf("Remote target executing %s on %s failed ", cmd, remote.Host, err))
 				}
-				if err := client.run(cmd, resultdir, nil); err != nil {
-					fmt.Println(fmt.Sprintf("Executing %s on %s failed ", cmd, client.Host, err))
+				if err := client.run(cmd, resultdir, buf); err != nil {
+					fmt.Println(fmt.Sprintf("Jump host executing %s on %s failed ", cmd, client.Host, err))
 				}
 
 			}
@@ -222,7 +222,7 @@ func (client *SSHClient) run(command string, resultdir string, sink *bufio.ReadW
 	defer s.Close()
 
 	so, _ := s.StdoutPipe()
-	if sink == nil {
+	if resultdir != "" {
 		resultfile := strings.Replace(command, " ", "_", -1)
 		resultfile = strings.Replace(resultfile, "/", "-", -1)
 		resultfile = strings.Replace(resultfile, ".", "", -1)
