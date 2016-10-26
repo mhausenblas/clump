@@ -152,40 +152,41 @@ func mexec(node string, commands []string) {
 		}
 		if isprivate { // node has an IP that is in the private address space
 			fmt.Println(fmt.Sprintf("%s is an IP address in the private address space", node))
-			for _, cmd := range commands {
-				sshConfig := &ssh.ClientConfig{
-					User: user,
-					Auth: []ssh.AuthMethod{
-						publickey(fprivatekey)},
-					Timeout: CONNECTION_TIMEOUT,
-				}
-				client := &SSHClient{
-					Config: sshConfig,
-					Host:   "35.160.66.81",
-					Port:   22,
-				}
-				remote := &SSHClient{
-					Config: sshConfig,
-					Host:   node,
-					Port:   22,
-				}
-
-				var bin, bout bytes.Buffer
-				buf := bufio.NewReadWriter(bufio.NewReader(&bin), bufio.NewWriter(&bout))
-
-				if err := remote.run(cmd, "", buf); err != nil {
-					fmt.Println(fmt.Sprintf("Remote target executing %s on %s failed ", cmd, remote.Host, err))
-				}
-				if err := client.run(cmd, resultdir, buf); err != nil {
-					fmt.Println(fmt.Sprintf("Jump host executing %s on %s failed ", cmd, client.Host, err))
-				}
-
-			}
-		} else {
-			for _, cmd := range commands {
-				rexec(node, cmd, resultdir)
-			}
 		}
+		// for _, cmd := range commands {
+		// 		sshConfig := &ssh.ClientConfig{
+		// 			User: user,
+		// 			Auth: []ssh.AuthMethod{
+		// 				publickey(fprivatekey)},
+		// 			Timeout: CONNECTION_TIMEOUT,
+		// 		}
+		// 		client := &SSHClient{
+		// 			Config: sshConfig,
+		// 			Host:   "35.160.66.81",
+		// 			Port:   22,
+		// 		}
+		// 		remote := &SSHClient{
+		// 			Config: sshConfig,
+		// 			Host:   node,
+		// 			Port:   22,
+		// 		}
+		//
+		// 		var bin, bout bytes.Buffer
+		// 		buf := bufio.NewReadWriter(bufio.NewReader(&bin), bufio.NewWriter(&bout))
+		//
+		// 		if err := remote.run(cmd, "", buf); err != nil {
+		// 			fmt.Println(fmt.Sprintf("Remote target executing %s on %s failed ", cmd, remote.Host, err))
+		// 		}
+		// 		if err := client.run(cmd, resultdir, buf); err != nil {
+		// 			fmt.Println(fmt.Sprintf("Jump host executing %s on %s failed ", cmd, client.Host, err))
+		// 		}
+		//
+		// 	}
+		// } else {
+		for _, cmd := range commands {
+			rexec(node, cmd, resultdir)
+		}
+		// }
 	} else {
 		fmt.Println(fmt.Sprintf("Skipping %s since it's not a valid IPv4 address", node))
 	}

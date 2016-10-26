@@ -1,14 +1,14 @@
-# LOCAL:./dcos_diagnostics.sh
+LOCAL:./dcos_diagnostics.sh
 REMOTE:/bin/hostname -f
-# REMOTE:timedatectl
-# REMOTE:cat /proc/version
-# REMOTE:sudo ps faux
-# REMOTE:cat /etc/passwd
-# REMOTE:df -h
-# REMOTE:mount
-# REMOTE:sudo ss -lptn
-# REMOTE:sudo ip route
-# REMOTE:cat /etc/resolv.conf
-# REMOTE:systemctl list-unit-files --all
-# REMOTE:sudo docker --version
+REMOTE:timedatectl
+REMOTE:cat /proc/version
+REMOTE:sudo ps faux
+REMOTE:cat /etc/passwd
+REMOTE:df -h
+REMOTE:mount
+REMOTE:sudo ss -lptn
+REMOTE:sudo ip route
+REMOTE:cat /etc/resolv.conf
+REMOTE:systemctl list-unit-files --all
+REMOTE:sudo docker --version
 # REMOTE:sudo ./cinf
