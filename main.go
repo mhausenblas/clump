@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 	"io"
 	"io/ioutil"
 	"net"
@@ -14,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -31,6 +31,7 @@ var (
 	IPv4_20bit_block_high net.IP
 	IPv4_16bit_block_low  net.IP
 	IPv4_16bit_block_high net.IP
+	CONNECTION_TIMEOUT    time.Duration
 )
 
 type SSHClient struct {
@@ -54,6 +55,9 @@ func init() {
 	IPv4_20bit_block_high = net.ParseIP("172.31.255.255")
 	IPv4_16bit_block_low = net.ParseIP("192.168.0.0")
 	IPv4_16bit_block_high = net.ParseIP("192.168.255.255")
+
+	// how long to wait for the SSH connection to establish (TODO: make configurable via env variable)
+	CONNECTION_TIMEOUT = 5 * time.Second
 
 	flag.StringVar(&user, "u", "", "user name to use for SSH connection")
 	flag.StringVar(&fprivatekey, "pk", "", "path to private key to use for SSH connection")
@@ -145,14 +149,10 @@ func mexec(node string, commands []string) {
 			os.Mkdir(resultdir, 0700)
 		}
 		if isprivate { // node has an IP that is in the private address space
-			fmt.Println(fmt.Sprintf("Forwarding to %s", node))
-			for _, cmd := range commands {
-				fexec("35.160.66.81", node, cmd, resultdir)
-			}
-		} else {
-			for _, cmd := range commands {
-				rexec(node, cmd, resultdir)
-			}
+			fmt.Println(fmt.Sprintf("%s is an IP address in the private address space", node))
+		}
+		for _, cmd := range commands {
+			rexec(node, cmd, resultdir)
 		}
 	} else {
 		fmt.Println(fmt.Sprintf("Skipping %s since it's not a valid IPv4 address", node))
@@ -164,6 +164,7 @@ func rexec(node string, command string, resultdir string) {
 		User: user,
 		Auth: []ssh.AuthMethod{
 			publickey(fprivatekey)},
+		Timeout: CONNECTION_TIMEOUT,
 	}
 	fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
 	client := &SSHClient{
@@ -176,58 +177,8 @@ func rexec(node string, command string, resultdir string) {
 	}
 }
 
-func fexec(node string, remote string, command string, resultdir string) {
-	sshConfig := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{
-			publickey(fprivatekey)},
-	}
-	fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
-	client := &SSHClient{
-		Config: sshConfig,
-		Host:   node,
-		Port:   22,
-	}
-	if err := client.forward(remote, command, resultdir); err != nil {
-		fmt.Println(fmt.Sprintf("Executing %s on %s failed ", command, client.Host, err))
-	}
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // SSH connection stuff
-
-func (client *SSHClient) forward(remote string, command string, resultdir string) error {
-	s := &ssh.Session{}
-	err := errors.New("")
-	if s, err = client.create(); err != nil {
-		return err
-	}
-	defer s.Close()
-
-	if err = agent.RequestAgentForwarding(s); err != nil {
-		fmt.Println(fmt.Sprintf("Requesting to forward to %s failed %s", remote, err))
-		return err
-	}
-
-	if err = agent.ForwardToRemote(client.Client, remote); err != nil {
-		fmt.Println(fmt.Sprintf("Forward  to %s failed %s", remote, err))
-		return err
-	}
-	so, _ := s.StdoutPipe()
-	resultfile := strings.Replace(command, " ", "_", -1)
-	resultfile = strings.Replace(resultfile, "/", "-", -1)
-	resultfile = strings.Replace(resultfile, ".", "", -1)
-	rfname := filepath.Join(resultdir, resultfile)
-	rf := &os.File{}
-	if rf, err = os.Create(rfname); err != nil {
-		return err
-	}
-	defer rf.Close()
-
-	go io.Copy(rf, so)
-	err = s.Run(command)
-	return err
-}
 
 func (client *SSHClient) run(command string, resultdir string) error {
 	s := &ssh.Session{}
