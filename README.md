@@ -30,10 +30,10 @@ For example:
     REMOTE:timedatectl
     
     $ clump -u core -pk /Users/mhausenblas/.ssh/test -nl clusternodes -cmds snapshot.cmds
-    Trying to establish node list from test/clusternodes
-    Got 1 target nodes
-    Trying to establish list of commands from test/snapshot.cmds
-    Got 2 commands to execute
+    Trying to establish node list from clusternodes
+    Got 1 target node(s)
+    Executing 1 command(s) locally ...
+    Executing 2 command(s) remotely ...
     Attempting to ssh into core@35.160.157.251
     Attempting to ssh into core@35.160.157.251
     

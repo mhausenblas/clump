@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 	"io"
 	"io/ioutil"
 	"net"
@@ -34,6 +35,7 @@ var (
 
 type SSHClient struct {
 	Config *ssh.ClientConfig
+	Client *ssh.Client
 	Host   string
 	Port   int
 }
@@ -137,12 +139,23 @@ func nexec(nodes []string, commands []string) {
 }
 
 func mexec(node string, commands []string) {
-	resultdir := strings.Replace(node, ".", "_", -1)
-	if _, err := os.Stat(resultdir); os.IsNotExist(err) {
-		os.Mkdir(resultdir, 0700)
-	}
-	for _, cmd := range commands {
-		rexec(node, cmd, resultdir)
+	if isprivate, err := privateIP(node); err == nil {
+		resultdir := strings.Replace(node, ".", "_", -1)
+		if _, err := os.Stat(resultdir); os.IsNotExist(err) {
+			os.Mkdir(resultdir, 0700)
+		}
+		if isprivate { // node has an IP that is in the private address space
+			fmt.Println(fmt.Sprintf("Forwarding to %s", node))
+			for _, cmd := range commands {
+				fexec("35.160.66.81", node, cmd, resultdir)
+			}
+		} else {
+			for _, cmd := range commands {
+				rexec(node, cmd, resultdir)
+			}
+		}
+	} else {
+		fmt.Println(fmt.Sprintf("Skipping %s since it's not a valid IPv4 address", node))
 	}
 }
 
@@ -152,28 +165,69 @@ func rexec(node string, command string, resultdir string) {
 		Auth: []ssh.AuthMethod{
 			publickey(fprivatekey)},
 	}
+	fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
+	client := &SSHClient{
+		Config: sshConfig,
+		Host:   node,
+		Port:   22,
+	}
+	if err := client.run(command, resultdir); err != nil {
+		fmt.Println(fmt.Sprintf("Executing %s on %s failed ", command, client.Host, err))
+	}
+}
 
-	if isprivate, err := privateIP(node); err == nil {
-		if isprivate { // node has an IP that is in the private address space
-			fmt.Println(fmt.Sprintf("Skipping %s for now", node))
-		} else {
-			fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
-			client := &SSHClient{
-				Config: sshConfig,
-				Host:   node,
-				Port:   22,
-			}
-			if err := client.run(command, resultdir); err != nil {
-				fmt.Println(fmt.Sprintf("Executing %s on %s failed ", command, client.Host, err))
-			}
-		}
-	} else {
-		fmt.Println(fmt.Sprintf("Skipping %s since it's not a valid IPv4 address", node))
+func fexec(node string, remote string, command string, resultdir string) {
+	sshConfig := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{
+			publickey(fprivatekey)},
+	}
+	fmt.Println(fmt.Sprintf("Attempting to ssh into %s@%s to execute %s", user, node, command))
+	client := &SSHClient{
+		Config: sshConfig,
+		Host:   node,
+		Port:   22,
+	}
+	if err := client.forward(remote, command, resultdir); err != nil {
+		fmt.Println(fmt.Sprintf("Executing %s on %s failed ", command, client.Host, err))
 	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // SSH connection stuff
+
+func (client *SSHClient) forward(remote string, command string, resultdir string) error {
+	s := &ssh.Session{}
+	err := errors.New("")
+	if s, err = client.create(); err != nil {
+		return err
+	}
+	defer s.Close()
+
+	if err = agent.RequestAgentForwarding(s); err != nil {
+		fmt.Println(fmt.Sprintf("Requesting to forward to %s failed %s", remote, err))
+		return err
+	}
+
+	if err = agent.ForwardToRemote(client.Client, remote); err != nil {
+		fmt.Println(fmt.Sprintf("Forward  to %s failed %s", remote, err))
+		return err
+	}
+	so, _ := s.StdoutPipe()
+	resultfile := strings.Replace(command, " ", "_", -1)
+	resultfile = strings.Replace(resultfile, "/", "-", -1)
+	resultfile = strings.Replace(resultfile, ".", "", -1)
+	rfname := filepath.Join(resultdir, resultfile)
+	rf := &os.File{}
+	if rf, err = os.Create(rfname); err != nil {
+		return err
+	}
+	defer rf.Close()
+
+	go io.Copy(rf, so)
+	err = s.Run(command)
+	return err
+}
 
 func (client *SSHClient) run(command string, resultdir string) error {
 	s := &ssh.Session{}
@@ -204,6 +258,7 @@ func (client *SSHClient) create() (*ssh.Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Failed to dial: %s", err)
 	}
+	client.Client = c
 	s, err := c.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create session: %s", err)
