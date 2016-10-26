@@ -1,15 +1,14 @@
-#LOCAL:dcos node diagnostics create all 
-#LOCAL:dcos node diagnostics download xxxx.zip
-#REMOTE:/bin/hostname -f
-#REMOTE:timedatectl
-#REMOTE:cat /proc/version
-#REMOTE:sudo ps faux
-#REMOTE:cat /etc/passwd
-#REMOTE:df -h
-#REMOTE:mount
-#REMOTE:sudo ss -lptn (lsof as a fallback)
-#REMOTE:sudo ip route
-#REMOTE:cat /etc/resolv.conf
-#REMOTE:systemctl list-unit-files --all
-#REMOTE:sudo docker --version
-#REMOTE:sudo cinf
+#LOCAL:./dcos_diagnostics.sh
+REMOTE:/bin/hostname -f
+REMOTE:timedatectl
+REMOTE:cat /proc/version
+REMOTE:sudo ps faux
+REMOTE:cat /etc/passwd
+REMOTE:df -h
+REMOTE:mount
+REMOTE:sudo ss -lptn
+REMOTE:sudo ip route
+REMOTE:cat /etc/resolv.conf
+REMOTE:systemctl list-unit-files --all
+REMOTE:sudo docker --version
+REMOTE:curl -s -L https://github.com/mhausenblas/cinf/releases/download/v0.4.0-alpha/cinf -o cinf && sudo chmod +x cinf && sudo ./cinf
