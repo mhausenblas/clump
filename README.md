@@ -2,7 +2,11 @@
 
 A configurable cluster dump tool for collecting system status information about nodes in a cluster, using SSH.
 
-## Usage
+## Install
+
+TBD.
+
+## Use
 
 To dump a cluster state:
 
@@ -17,16 +21,15 @@ with:
 
 For example:
 
-    $ cat test/clusternodes
+    $ cat clusternodes
     35.160.157.251
     
-    $ cat test/snapshot.cmds
+    $ cat snapshot.cmds
+    LOCAL:id
     REMOTE:hostname -f
     REMOTE:timedatectl
-    #REMOTE:cat /proc/version
-    #REMOTE:sudo ps faux
     
-    $ clump -u core -pk /Users/mhausenblas/.ssh/test -nl test/clusternodes -cmds test/snapshot.cmds
+    $ clump -u core -pk /Users/mhausenblas/.ssh/test -nl clusternodes -cmds snapshot.cmds
     Trying to establish node list from test/clusternodes
     Got 1 target nodes
     Trying to establish list of commands from test/snapshot.cmds
@@ -41,12 +44,6 @@ For example:
         └── timedatectl
 
 Kudos go out to [Svett Ralchev](http://blog.ralch.com/tutorial/golang-ssh-connection/) for the seed code base around the SSH client.
-
-To do:
-
-- fix DC/OS recipe
-- credential forwarding?
-
 
 ## Disclaimer
 
