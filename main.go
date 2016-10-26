@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"flag"
@@ -64,6 +65,7 @@ func init() {
 	flag.StringVar(&fnodes, "nl", "", "path to file listing the target nodes, one IP address per line")
 	flag.StringVar(&fcmds, "cmds", "", "path to file listing the commands to be executed, one entry per line")
 	flag.Usage = func() {
+		about()
 		fmt.Println("\nUsage: clump -u $USERNAME -pk $PRIVATESSHKEY -nl $NODES -cmds $COMMANDS")
 		fmt.Println("\nExample: clump -u core -pk /Users/mhausenblas/.ssh/test -nl clusternodes -cmds snapshot")
 		flag.PrintDefaults()
@@ -150,9 +152,39 @@ func mexec(node string, commands []string) {
 		}
 		if isprivate { // node has an IP that is in the private address space
 			fmt.Println(fmt.Sprintf("%s is an IP address in the private address space", node))
-		}
-		for _, cmd := range commands {
-			rexec(node, cmd, resultdir)
+			for _, cmd := range commands {
+				sshConfig := &ssh.ClientConfig{
+					User: user,
+					Auth: []ssh.AuthMethod{
+						publickey(fprivatekey)},
+					Timeout: CONNECTION_TIMEOUT,
+				}
+				client := &SSHClient{
+					Config: sshConfig,
+					Host:   "35.160.66.81",
+					Port:   22,
+				}
+				remote := &SSHClient{
+					Config: sshConfig,
+					Host:   node,
+					Port:   22,
+				}
+
+				var bin, bout bytes.Buffer
+				buf := bufio.NewReadWriter(bufio.NewReader(&bin), bufio.NewWriter(&bout))
+
+				if err := remote.run(cmd, "", buf); err != nil {
+					fmt.Println(fmt.Sprintf("Executing %s on %s failed ", cmd, client.Host, err))
+				}
+				if err := client.run(cmd, resultdir, nil); err != nil {
+					fmt.Println(fmt.Sprintf("Executing %s on %s failed ", cmd, client.Host, err))
+				}
+
+			}
+		} else {
+			for _, cmd := range commands {
+				rexec(node, cmd, resultdir)
+			}
 		}
 	} else {
 		fmt.Println(fmt.Sprintf("Skipping %s since it's not a valid IPv4 address", node))
@@ -172,7 +204,7 @@ func rexec(node string, command string, resultdir string) {
 		Host:   node,
 		Port:   22,
 	}
-	if err := client.run(command, resultdir); err != nil {
+	if err := client.run(command, resultdir, nil); err != nil {
 		fmt.Println(fmt.Sprintf("Executing %s on %s failed ", command, client.Host, err))
 	}
 }
@@ -180,28 +212,33 @@ func rexec(node string, command string, resultdir string) {
 ///////////////////////////////////////////////////////////////////////////////
 // SSH connection stuff
 
-func (client *SSHClient) run(command string, resultdir string) error {
+func (client *SSHClient) run(command string, resultdir string, sink *bufio.ReadWriter) error {
 	s := &ssh.Session{}
 	err := errors.New("")
+
 	if s, err = client.create(); err != nil {
 		return err
 	}
 	defer s.Close()
+
 	so, _ := s.StdoutPipe()
-
-	resultfile := strings.Replace(command, " ", "_", -1)
-	resultfile = strings.Replace(resultfile, "/", "-", -1)
-	resultfile = strings.Replace(resultfile, ".", "", -1)
-	rfname := filepath.Join(resultdir, resultfile)
-	rf := &os.File{}
-	if rf, err = os.Create(rfname); err != nil {
+	if sink == nil {
+		resultfile := strings.Replace(command, " ", "_", -1)
+		resultfile = strings.Replace(resultfile, "/", "-", -1)
+		resultfile = strings.Replace(resultfile, ".", "", -1)
+		rfname := filepath.Join(resultdir, resultfile)
+		rf := &os.File{}
+		if rf, err = os.Create(rfname); err != nil {
+			return err
+		}
+		defer rf.Close()
+		go io.Copy(rf, so)
+		err = s.Run(command)
 		return err
+	} else {
+		go io.Copy(sink, so)
 	}
-	defer rf.Close()
-
-	go io.Copy(rf, so)
-	err = s.Run(command)
-	return err
+	return nil
 }
 
 func (client *SSHClient) create() (*ssh.Session, error) {
