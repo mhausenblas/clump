@@ -151,7 +151,7 @@ func mexec(node string, commands []string) {
 			os.Mkdir(resultdir, 0700)
 		}
 		if isprivate { // node has an IP that is in the private address space
-			fmt.Println(fmt.Sprintf("%s is an IP address in the private address space", node))
+			fmt.Println(fmt.Sprintf("%s is an IP address in the private address space. If it times out, use a VPN to be on the same network.", node))
 		}
 		// for _, cmd := range commands {
 		// 		sshConfig := &ssh.ClientConfig{

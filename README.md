@@ -18,13 +18,18 @@ A configurable cluster dump tool for collecting system status information about 
 
 ## Use
 
-To dump a cluster state:
+You can use clump as is or via one of the recipes supplied:
+
+- [Recipe for DC/OS](/recipes/dcos)
+- ... 
+
+Generic usage is as follows:
 
     $ clump -u $USERNAME -pk $PRIVATESSHKEY -nl $NODES -cmds $COMMANDS
 
 with:
 
-- `$USERNAME` … username to use for SSH connection  
+- `$USERNAME` … username to use for SSH connection
 - `$PRIVATESSHKEY` … filename (with relative or absolute filepath) of the private SSH key to use
 - `$NODES` … filename (with relative or absolute filepath) of a text file listing the target nodes, one IP address per line
 - `$COMMANDS` … filename (with relative or absolute filepath) of a text file listing the commands to be executed with one entry per line; if an entry is prefixed with `LOCAL:` it will be executed locally, if `REMOTE:` then on each of the target nodes
@@ -58,4 +63,3 @@ Kudos go out to [Svett Ralchev](http://blog.ralch.com/tutorial/golang-ssh-connec
 ## Disclaimer
 
 > THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESSED OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
