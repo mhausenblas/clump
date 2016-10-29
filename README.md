@@ -6,13 +6,13 @@ A configurable cluster dump tool for collecting system status information about 
 
 ### Linux
 
-    $ curl -s -L https://github.com/mhausenblas/clump/releases/download/v0.1.0/linux-clump -o clump
+    $ curl -s -L https://github.com/mhausenblas/clump/releases/download/v0.1.1/linux-clump -o clump
     $ sudo mv clump /usr/local/bin
     $ sudo chmod +x /usr/local/bin/clump
 
 ### MacOS
 
-    $ curl -s -L https://github.com/mhausenblas/clump/releases/download/v0.1.0/osx-clump -o clump
+    $ curl -s -L https://github.com/mhausenblas/clump/releases/download/v0.1.1/osx-clump -o clump
     $ sudo mv clump /usr/local/bin
     $ sudo chmod +x /usr/local/bin/clump
 
